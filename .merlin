@@ -1,0 +1,11 @@
+S .
+B +threads
+B _build
+PKG js_of_ocaml
+PKG tyxml
+PKG lwt
+PKG react
+PKG reactiveData
+PKG xword
+PKG xword.convert
+EXT js
