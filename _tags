@@ -1,1 +1,3 @@
 true: package(lwt.ppx), package(js_of_ocaml), package(js_of_ocaml.ppx), package(js_of_ocaml.tyxml), package(tyxml), package(ppx_deriving), package(js_of_ocaml.deriving.ppx), package(js_of_ocaml.deriving), package(react), package(reactiveData), package(xword)
+
+<crosspad.js>: pretty, sourcemap, opt(3)

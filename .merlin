@@ -1,11 +1,15 @@
 S .
 B +threads
 B _build
+
 PKG js_of_ocaml
-PKG tyxml
+PKG js_of_ocaml.ppx
 PKG lwt
 PKG react
 PKG reactiveData
+PKG tyxml
+
 PKG xword
 PKG xword.convert
+
 EXT js
