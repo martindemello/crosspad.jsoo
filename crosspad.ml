@@ -48,6 +48,7 @@ end
 module View = struct
   open Model
   open Cursor
+  open Action
   open Tyxml_js
 
   let px x = (x, Some `Px)
@@ -58,10 +59,14 @@ module View = struct
 
   let cellstyle x y model =
     let cell = Xword.get_cell model.xw x y in
-    let is_cur = model.cursor.x == x && model.cursor.y == y in
-    let bg = match cell with Black -> "black" | _ -> "white" in
-    let cursor = if is_cur then "cursor-" else "" in
-    ["crosspad-square"; "crosspad-" ^ cursor ^ bg]
+    let is_cur = model.cursor.x = x && model.cursor.y = y in
+    let bg = match is_cur, cell with
+      | true, Black -> "crosspad-cursor-black"
+      | true, _ -> "crosspad-cursor-white"
+      | false, Black -> "crosspad-black"
+      | false, _ -> "crosspad-white"
+    in
+    ["crosspad-square"; bg]
 
   let letter_of_cell = function
     | Letter s -> s
@@ -93,16 +98,7 @@ module View = struct
              a_x (px x); a_y (px y);
              a_width (px w); a_height (px h)] []
 
-  (* SVG reactive fragments *)
-  module RC = struct
-    let svg_rect x y w h cls' =
-      let open Svg in
-      rect ~a:[R.Svg.a_class cls';
-               a_x (px x); a_y (px y);
-               a_width (px w); a_height (px h)] []
-  end
-
-  let cell x y signal =
+  let cell x y (signal, f) =
     let s = square_size in
     let x0 = top_left.x + x * s |> float in
     let y0 = top_left.y + y * s |> float in
@@ -111,24 +107,28 @@ module View = struct
     let num_y = y0 +. (s /. 3.) in
     let let_x = x0 +. (s /. 2.) in
     let let_y = y0 +. s -. 5. in
-    let cstyle' = React.S.map (cellstyle x y) signal in
     let letter' = [ R.Svg.pcdata @@ React.S.map (letter x y) signal ] in
     let number' = [ R.Svg.pcdata @@ React.S.map (number x y) signal ] in
     let t_num' = svg_text ["crosspad-number"] num_x num_y number' in
     let t_let' = svg_text ["crosspad-letter"] let_x let_y letter' in
-    let rect' = RC.svg_rect x0 y0 s s cstyle' in
+    let rect' = Svg.(rect ~a:[
+        a_onclick (fun _ -> Controller.update (SetCursor (x, y)) (signal, f); true);
+        R.Svg.a_class @@ React.S.map (cellstyle x y) signal;
+        a_x (px x0); a_y (px y0);
+        a_width (px s); a_height (px s)] [])
+    in
     Svg.g [ t_num'; t_let'; rect' ]
 
-  let cells signal =
+  let cells (signal, f) =
     let list_of_model model =
       let out = ref [] in
       Xword.iteri model.xw (fun _ x y _ ->
-          out := (cell x y signal) :: !out);
+          out := (cell x y (signal, f)) :: !out);
       List.rev !out
     in
     ReactiveData.RList.from_signal (React.S.map list_of_model signal)
 
-  let svg_grid signal =
+  let svg_grid (signal, f) =
     let s = square_size in
     let x0 = top_left.x |> float in
     let y0 = top_left.y |> float in
@@ -153,7 +153,7 @@ module View = struct
       Svg.g ~a:[Svg.a_transform [`Translate (0.5, Some 0.5)]]
         [
           Svg.g [box];
-          R.Svg.g (cells signal)
+          R.Svg.g (cells (signal, f))
         ]
     ]
 
@@ -162,7 +162,7 @@ module View = struct
     div [
       div [pcdata "hello world"];
       div [ svg ~a:Svg.([a_width (px 600.0); a_height (px 600.0)])
-              [ svg_grid signal ] ]
+              [ svg_grid (signal, f) ] ]
     ]
 end
 
