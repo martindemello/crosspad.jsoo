@@ -53,7 +53,8 @@ module View = struct
 
   let px x = (x, Some `Px)
 
-  let top_left = {x = 0; y = 0}
+  let top_left_x = 0
+  let top_left_y = 0
 
   let square_size = 32
 
@@ -66,7 +67,7 @@ module View = struct
       | false, Black -> "crosspad-black"
       | false, _ -> "crosspad-white"
     in
-    ["crosspad-square"; bg]
+    [bg; "crosspad-square"]
 
   let letter_of_cell = function
     | Letter s -> s
@@ -100,20 +101,22 @@ module View = struct
 
   let cell x y (signal, f) =
     let s = square_size in
-    let x0 = top_left.x + x * s |> float in
-    let y0 = top_left.y + y * s |> float in
+    let x0 = top_left_x + x * s |> float in
+    let y0 = top_left_y + y * s |> float in
     let s = s |> float in
     let num_x = x0 +. 1. in
     let num_y = y0 +. (s /. 3.) in
     let let_x = x0 +. (s /. 2.) in
     let let_y = y0 +. s -. 5. in
-    let letter' = [ R.Svg.pcdata @@ React.S.map (letter x y) signal ] in
-    let number' = [ R.Svg.pcdata @@ React.S.map (number x y) signal ] in
+    let letter' = [ R.Svg.pcdata @@ React.S.map ~eq:String.equal (letter x y) signal ] in
+    let number' = [ R.Svg.pcdata @@ React.S.map ~eq:String.equal (number x y) signal ] in
     let t_num' = svg_text ["crosspad-number"] num_x num_y number' in
     let t_let' = svg_text ["crosspad-letter"] let_x let_y letter' in
     let rect' = Svg.(rect ~a:[
         a_onclick (fun _ -> Controller.update (SetCursor (x, y)) (signal, f); true);
-        R.Svg.a_class @@ React.S.map (cellstyle x y) signal;
+        R.Svg.a_class @@ React.S.map
+          ~eq:(fun a b -> String.equal (List.hd a) (List.hd b))
+          (cellstyle x y) signal;
         a_x (px x0); a_y (px y0);
         a_width (px s); a_height (px s)] [])
     in
@@ -122,33 +125,39 @@ module View = struct
   let cells (signal, f) =
     let list_of_model model =
       let out = ref [] in
-      Xword.iteri model.xw (fun _ x y _ ->
-          out := (cell x y (signal, f)) :: !out);
+      for y = 0 to model.xw.cols - 1 do
+        for x = 0 to model.xw.rows - 1 do
+          out := (cell x y (signal, f)) :: !out
+        done
+      done;
       List.rev !out
     in
-    ReactiveData.RList.from_signal (React.S.map list_of_model signal)
+    (* we don't expect xword size to change *)
+    let eq x y = true in
+    ReactiveData.RList.from_signal (React.S.map ~eq list_of_model signal)
 
   let svg_grid (signal, f) =
     let s = square_size in
-    let x0 = top_left.x |> float in
-    let y0 = top_left.y |> float in
+    let x0 = top_left_x |> float in
+    let y0 = top_left_y |> float in
     let w model = model.xw.cols * s |> float in
     let h model = model.xw.rows * s |> float in
     let w_px model = px (w model) in
     let h_px model = px (h model) in
     let svg_w_px model = px (w model +. 1.) in
     let svg_h_px model = px (h model +. 1.) in
+    let size_eq (x, _) (y, _) = x = y in
     let box = Svg.rect ~a:[
         Svg.a_class ["crosspad-grid-rect"];
         Svg.a_x (px x0);
         Svg.a_y (px y0);
-        R.Svg.a_width  (React.S.map w_px signal);
-        R.Svg.a_height (React.S.map h_px signal);
+        R.Svg.a_width  (React.S.map ~eq:size_eq w_px signal);
+        R.Svg.a_height (React.S.map ~eq:size_eq h_px signal);
       ] []
     in
     Svg.svg ~a:[
-      R.Svg.a_width (React.S.map svg_w_px signal);
-      R.Svg.a_height (React.S.map svg_h_px signal)
+      R.Svg.a_width  (React.S.map ~eq:size_eq svg_w_px signal);
+      R.Svg.a_height (React.S.map ~eq:size_eq svg_h_px signal)
     ] [
       Svg.g ~a:[Svg.a_transform [`Translate (0.5, Some 0.5)]]
         [
