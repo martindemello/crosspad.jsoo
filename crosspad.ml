@@ -29,15 +29,10 @@ module Action = struct
     | SetCursor of int * int
 end
 
-type rs = Model.t React.signal
-type rf = ?step:React.step -> Model.t -> unit
-type rp = rs * rf
-
 module Controller = struct
-  let update action ((r, f) : rp) =
+  let update action (model, f) =
     let open Action in
     let open Model in
-    let model = React.S.value r in
     let model =
       match action with
       | SetCursor (x, y) -> set_cursor model x y
@@ -99,7 +94,7 @@ module View = struct
              a_x (px x); a_y (px y);
              a_width (px w); a_height (px h)] []
 
-  let cell x y (signal, f) =
+  let cell x y (model, f) =
     let s = square_size in
     let x0 = top_left_x + x * s |> float in
     let y0 = top_left_y + y * s |> float in
@@ -108,70 +103,62 @@ module View = struct
     let num_y = y0 +. (s /. 3.) in
     let let_x = x0 +. (s /. 2.) in
     let let_y = y0 +. s -. 5. in
-    let letter' = [ R.Svg.pcdata @@ React.S.map ~eq:String.equal (letter x y) signal ] in
-    let number' = [ R.Svg.pcdata @@ React.S.map ~eq:String.equal (number x y) signal ] in
+    let letter' = [ Svg.pcdata @@ letter x y model ] in
+    let number' = [ Svg.pcdata @@ number x y model ] in
     let t_num' = svg_text ["crosspad-number"] num_x num_y number' in
     let t_let' = svg_text ["crosspad-letter"] let_x let_y letter' in
     let rect' = Svg.(rect ~a:[
-        a_onclick (fun _ -> Controller.update (SetCursor (x, y)) (signal, f); true);
-        R.Svg.a_class @@ React.S.map
-          ~eq:(fun a b -> String.equal (List.hd a) (List.hd b))
-          (cellstyle x y) signal;
+        a_onclick (fun _ -> Controller.update (SetCursor (x, y)) (model, f); true);
+        Svg.a_class @@ cellstyle x y model;
         a_x (px x0); a_y (px y0);
         a_width (px s); a_height (px s)] [])
     in
     Svg.g [ t_num'; t_let'; rect' ]
 
-  let cells (signal, f) =
-    let list_of_model model =
-      let out = ref [] in
-      for y = 0 to model.xw.cols - 1 do
-        for x = 0 to model.xw.rows - 1 do
-          out := (cell x y (signal, f)) :: !out
-        done
-      done;
-      List.rev !out
-    in
-    (* we don't expect xword size to change *)
-    let eq x y = true in
-    ReactiveData.RList.from_signal (React.S.map ~eq list_of_model signal)
+  let cells (model, f) =
+    let out = ref [] in
+    for y = 0 to model.xw.cols - 1 do
+      for x = 0 to model.xw.rows - 1 do
+        out := (cell x y (model, f)) :: !out
+      done
+    done;
+    List.rev !out
 
-  let svg_grid (signal, f) =
+  let svg_grid (model, f) =
     let s = square_size in
     let x0 = top_left_x |> float in
     let y0 = top_left_y |> float in
-    let w model = model.xw.cols * s |> float in
-    let h model = model.xw.rows * s |> float in
-    let w_px model = px (w model) in
-    let h_px model = px (h model) in
-    let svg_w_px model = px (w model +. 1.) in
-    let svg_h_px model = px (h model +. 1.) in
-    let size_eq (x, _) (y, _) = x = y in
+    let w = model.xw.cols * s |> float in
+    let h = model.xw.rows * s |> float in
+    let w_px = px w in
+    let h_px = px h in
+    let svg_w_px = px (w +. 1.) in
+    let svg_h_px = px (h +. 1.) in
     let box = Svg.rect ~a:[
         Svg.a_class ["crosspad-grid-rect"];
         Svg.a_x (px x0);
         Svg.a_y (px y0);
-        R.Svg.a_width  (React.S.map ~eq:size_eq w_px signal);
-        R.Svg.a_height (React.S.map ~eq:size_eq h_px signal);
+        Svg.a_width  w_px;
+        Svg.a_height h_px;
       ] []
     in
     Svg.svg ~a:[
-      R.Svg.a_width  (React.S.map ~eq:size_eq svg_w_px signal);
-      R.Svg.a_height (React.S.map ~eq:size_eq svg_h_px signal)
+      Svg.a_width  svg_w_px;
+      Svg.a_height svg_h_px
     ] [
       Svg.g ~a:[Svg.a_transform [`Translate (0.5, Some 0.5)]]
         [
           Svg.g [box];
-          R.Svg.g (cells (signal, f))
+          Svg.g (cells (model, f))
         ]
     ]
 
-  let view ((signal, f) : rp) =
+  let view (model, f) =
     let open Html5 in
     div [
       div [pcdata "hello world"];
       div [ svg ~a:Svg.([a_width (px 600.0); a_height (px 600.0)])
-              [ svg_grid (signal, f) ] ]
+              [ svg_grid (model, f) ] ]
     ]
 end
 
@@ -181,10 +168,10 @@ let main _ =
     Js.Opt.get (doc##getElementById(Js.string "main"))
       (fun () -> assert false)
   in
-  let m = Model.init 15 15 in
-  let rp = React.S.create m in
-  Dom.appendChild parent (Tyxml_js.To_dom.of_div (View.view rp)) ;
+  let rec f model =
+    let elt = Tyxml_js.To_dom.of_div (View.view (model, f)) in
+    Js.Opt.iter parent##.lastChild (Dom.replaceChild parent elt) in
+  f (Model.init 15 15);
   Lwt.return ()
 
 let _ = Lwt_js_events.onload () >>= main
-
