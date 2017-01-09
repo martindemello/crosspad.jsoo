@@ -1,32 +1,103 @@
 open Xword.Types
 open Lwt.Infix
 
-type coords = { x : int; y : int }
+type key_direction = [`Left | `Right | `Up | `Down ]
 
 module Model = struct
   open Cursor
 
   type t = {
     xw : xword;
-    cursor : Cursor.t
+    cursor : Cursor.t;
+    current_dir : word_direction
   }
 
   let init rows cols =
     let xw = Xword.make rows cols in
     Xword.renumber xw;
     { xw;
-      cursor = Cursor.make rows cols
+      cursor = Cursor.make rows cols;
+      current_dir = `Across
     }
 
-  let set_cursor model x y =
+  (* cursor *)
+  let set_cursor x y model =
     let cursor' = { model.cursor with x; y } in
     { model with cursor = cursor' }
+
+  let move_cursor ?wrap:(wrap=true) (d : direction) model =
+    let cursor' = Cursor.move model.cursor ~wrap d in
+    { model with cursor = cursor' }
+
+  let advance_cursor model =
+    move_cursor ~wrap:false (model.current_dir :> direction) model
+
+  let backspace_cursor model =
+    let dir' = match model.current_dir with
+      | `Across -> `Bksp_Ac | `Down -> `Bksp_Dn
+    in
+    move_cursor ~wrap:false dir' model
+
+  let set_current_dir d model =
+    { model with current_dir = d }
+
+  let toggle_current_dir model =
+    let d = match model.current_dir with `Across -> `Down | `Down -> `Across in
+    { model with current_dir = d }
+
+  let movement_key (d : key_direction) model =
+    let dir' : word_direction = match d with
+      | `Left | `Right -> `Across
+      | `Up | `Down -> `Down
+    in
+    model
+    |> move_cursor ~wrap:false (d :> direction)
+    |> set_current_dir dir'
+
+  (* grid *)
+
+  (* set a letter only if the current square is white *)
+  let set_current_letter s model =
+    let xw = model.xw in
+    let x, y = model.cursor.x, model.cursor.y in
+    let _ = match s with
+    | Some s -> Xword.set_letter xw x y s
+    | None -> Xword.delete_letter xw x y
+    in
+    model
+
+  let toggle_black model =
+    let xw = model.xw in
+    let x, y = model.cursor.x, model.cursor.y in
+    if Xword.toggle_black xw x y then Xword.renumber xw;
+    advance_cursor model
+
+  let set_letter s model =
+    model
+    |> set_current_letter (Some s)
+    |> advance_cursor
+
+  let delete_letter model =
+    model
+    |> set_current_letter None
+
+  let backspace_letter model =
+    model
+    |> backspace_cursor
+    |> delete_letter
 end
 
 
 module Action = struct
   type action =
     | SetCursor of int * int
+    | MoveCursor of key_direction
+    | SetDirection of word_direction
+    | SetLetter of string
+    | ToggleBlack
+    | Backspace
+    | Delete
+    | Nothing
 end
 
 module Controller = struct
@@ -35,7 +106,14 @@ module Controller = struct
     let open Model in
     let model =
       match action with
-      | SetCursor (x, y) -> set_cursor model x y
+      | SetCursor (x, y) -> set_cursor x y model
+      | MoveCursor d -> movement_key d model
+      | SetDirection d -> set_current_dir d model
+      | ToggleBlack -> toggle_black model
+      | SetLetter s -> set_letter s model
+      | Backspace -> backspace_letter model
+      | Delete -> delete_letter model
+      | Nothing -> model
     in
     f model
 end
@@ -43,16 +121,57 @@ end
 module View = struct
   open Model
   open Cursor
-  open Action
   open Tyxml_js
 
-  let px x = (x, Some `Px)
-
+  (* constants *)
   let top_left_x = 0
   let top_left_y = 0
 
   let square_size = 32
 
+  (* utils *)
+  let px x = (x, Some `Px)
+
+  let letter_of_code k =
+    if k >= 65 && k <= 90 then
+      Some (String.make 1 @@ Char.chr k)
+    else if k >= 97 && k <= 122 then
+      Some (String.make 1 @@ Char.chr (k - 32))
+    else
+      None
+
+  (* events *)
+  let add_keyboard_handlers (model, f) =
+    let w = Dom_html.window in
+    let fn evt =
+      let open Dom_html.Keyboard_code in
+      let code = evt##.keyCode in
+      let key = Dom_html.Keyboard_code.of_event evt in
+      let action = match key with
+      | Space -> Action.ToggleBlack
+      | ArrowLeft -> Action.MoveCursor `Left
+      | ArrowRight -> Action.MoveCursor `Right
+      | ArrowUp -> Action.MoveCursor `Up
+      | ArrowDown -> Action.MoveCursor `Down
+      | Backspace -> Action.Backspace
+      | Delete -> Action.Delete
+      | _ -> begin
+          match letter_of_code code with
+          | Some s -> Action.SetLetter s
+          | None -> Action.Nothing
+        end
+      in
+      match action with
+      | Action.Nothing -> Js._true
+      | a -> begin
+          Controller.update a (model, f);
+          Js._false
+        end
+    in
+    w##.onkeypress := Dom_html.handler fn ;
+    w##.onkeydown := Dom_html.handler fn
+
+  (* display *)
   let cellstyle x y model =
     let cell = Xword.get_cell model.xw x y in
     let is_cur = model.cursor.x = x && model.cursor.y = y in
@@ -108,7 +227,9 @@ module View = struct
     let t_num' = svg_text ["crosspad-number"] num_x num_y number' in
     let t_let' = svg_text ["crosspad-letter"] let_x let_y letter' in
     let rect' = Svg.(rect ~a:[
-        a_onclick (fun _ -> Controller.update (SetCursor (x, y)) (model, f); true);
+        a_onclick (fun _ ->
+            Controller.update (Action.SetCursor (x, y)) (model, f);
+            true);
         Svg.a_class @@ cellstyle x y model;
         a_x (px x0); a_y (px y0);
         a_width (px s); a_height (px s)] [])
@@ -154,6 +275,7 @@ module View = struct
     ]
 
   let view (model, f) =
+    add_keyboard_handlers (model, f);
     let open Html5 in
     div [
       div [pcdata "hello world"];
