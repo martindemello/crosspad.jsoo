@@ -3,22 +3,44 @@ open Lwt.Infix
 
 type key_direction = [`Left | `Right | `Up | `Down ]
 
+module Coords = struct
+  type t = int * int
+
+  let compare (x0, y0) (x1, y1) =
+    match Pervasives.compare x0 x1 with
+      0 -> Pervasives.compare y0 y1
+    | c -> c
+end
+
+module CSet = Set.Make(Coords)
+
+let set_of_list xs =
+  List.fold_left (fun set elem -> CSet.add elem set)
+    CSet.empty xs
+
 module Model = struct
   open Cursor
 
   type t = {
     xw : xword;
     cursor : Cursor.t;
-    current_dir : word_direction
+    current_dir : word_direction;
+    current_word : CSet.t
   }
 
-  let init rows cols =
-    let xw = Xword.make rows cols in
-    Xword.renumber xw;
-    { xw;
-      cursor = Cursor.make rows cols;
-      current_dir = `Across
-    }
+  (* updates *)
+  let renumber model =
+    Xword.renumber model.xw;
+    model
+
+  let update_current_word model =
+    let get_word = match model.current_dir with
+      | `Across -> Xword.word_ac
+      | `Down -> Xword.word_dn
+    in
+    let c = get_word model.xw model.cursor.x model.cursor.y in
+    let s = set_of_list c in
+    { model with current_word = s }
 
   (* cursor *)
   let set_cursor x y model =
@@ -53,6 +75,7 @@ module Model = struct
     model
     |> move_cursor ~wrap:false (d :> direction)
     |> set_current_dir dir'
+    |> update_current_word
 
   (* grid *)
 
@@ -70,7 +93,9 @@ module Model = struct
     let xw = model.xw in
     let x, y = model.cursor.x, model.cursor.y in
     if Xword.toggle_black xw x y then Xword.renumber xw;
-    advance_cursor model
+    model
+    |> advance_cursor
+    |> update_current_word
 
   let set_letter s model =
     model
@@ -85,6 +110,18 @@ module Model = struct
     model
     |> backspace_cursor
     |> delete_letter
+  
+  (* init *)
+  let init rows cols =
+    let xw = Xword.make rows cols in
+    { xw;
+      cursor = Cursor.make rows cols;
+      current_dir = `Across;
+      current_word = CSet.empty
+    }
+    |> renumber
+    |> update_current_word
+
 end
 
 
@@ -175,11 +212,16 @@ module View = struct
   let cellstyle x y model =
     let cell = Xword.get_cell model.xw x y in
     let is_cur = model.cursor.x = x && model.cursor.y = y in
-    let bg = match is_cur, cell with
-      | true, Black -> "crosspad-cursor-black"
-      | true, _ -> "crosspad-cursor-white"
-      | false, Black -> "crosspad-black"
-      | false, _ -> "crosspad-white"
+    let is_word = CSet.mem (x, y) model.current_word in
+    let bg =
+      if is_cur then match cell with
+      | Black -> "crosspad-cursor-black"
+      | _ -> "crosspad-cursor-white"
+      else if is_word then
+       "crosspad-word"
+      else match cell with
+      | Black -> "crosspad-black"
+      | _ -> "crosspad-white"
     in
     [bg; "crosspad-square"]
 
