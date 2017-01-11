@@ -43,10 +43,21 @@ module Model = struct
     { model with current_word = s }
 
   (* cursor *)
-  let set_cursor x y model =
-    let cursor' = { model.cursor with x; y } in
-    { model with cursor = cursor' }
+  let set_current_dir d model =
+    { model with current_dir = d }
+
+  let toggle_current_dir model =
+    let d = match model.current_dir with `Across -> `Down | `Down -> `Across in
+    { model with current_dir = d }
     |> update_current_word
+
+  let set_cursor x y model =
+    if x = model.cursor.x && y = model.cursor.y then
+      model |> toggle_current_dir
+    else
+      let cursor' = { model.cursor with x; y } in
+      { model with cursor = cursor' }
+      |> update_current_word
 
   let move_cursor ?wrap:(wrap=true) (d : direction) model =
     let cursor' = Cursor.move model.cursor ~wrap d in
@@ -60,13 +71,6 @@ module Model = struct
       | `Across -> `Bksp_Ac | `Down -> `Bksp_Dn
     in
     move_cursor ~wrap:false dir' model
-
-  let set_current_dir d model =
-    { model with current_dir = d }
-
-  let toggle_current_dir model =
-    let d = match model.current_dir with `Across -> `Down | `Down -> `Across in
-    { model with current_dir = d }
 
   let movement_key (d : key_direction) model =
     let dir' : word_direction = match d with
