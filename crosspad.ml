@@ -46,6 +46,7 @@ module Model = struct
   let set_cursor x y model =
     let cursor' = { model.cursor with x; y } in
     { model with cursor = cursor' }
+    |> update_current_word
 
   let move_cursor ?wrap:(wrap=true) (d : direction) model =
     let cursor' = Cursor.move model.cursor ~wrap d in
