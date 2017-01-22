@@ -25,7 +25,9 @@ module Model = struct
     xw : xword;
     cursor : Cursor.t;
     current_dir : word_direction;
-    current_word : CSet.t
+    current_word : CSet.t;
+    current_ac : int;
+    current_dn : int
   }
 
   (* updates *)
@@ -82,6 +84,12 @@ module Model = struct
     |> set_current_dir dir'
     |> update_current_word
 
+  (* clues *)
+  let set_current_clue d n model =
+    match d with
+    | `Across -> { model with current_ac = n }
+    | `Down -> { model with current_dn = n }
+
   (* grid *)
 
   (* set a letter only if the current square is white *)
@@ -115,14 +123,21 @@ module Model = struct
     model
     |> backspace_cursor
     |> delete_letter
-  
+
   (* init *)
   let init rows cols =
     let xw = Xword.make rows cols in
+    let clues = { across = [(1, "hello"); (2, "world")];
+                  down = [(10, "foo"); 20, "bar"]
+                }
+    in
+    let xw = { xw with clues } in
     { xw;
       cursor = Cursor.make rows cols;
       current_dir = `Across;
-      current_word = CSet.empty
+      current_word = CSet.empty;
+      current_ac = 0;
+      current_dn = 0;
     }
     |> renumber
     |> update_current_word
@@ -139,6 +154,7 @@ module Action = struct
     | ToggleBlack
     | Backspace
     | Delete
+    | SetClue of word_direction * int
     | Nothing
 end
 
@@ -155,6 +171,7 @@ module Controller = struct
       | SetLetter s -> set_letter s model
       | Backspace -> backspace_letter model
       | Delete -> delete_letter model
+      | SetClue (d, n) -> set_current_clue d n model
       | Nothing -> model
     in
     f model
@@ -213,7 +230,8 @@ module View = struct
     w##.onkeypress := Dom_html.handler fn ;
     w##.onkeydown := Dom_html.handler fn
 
-  (* display *)
+  (* Grid display *)
+
   let cellstyle x y model =
     let cell = Xword.get_cell model.xw x y in
     let is_cur = model.cursor.x = x && model.cursor.y = y in
@@ -239,7 +257,8 @@ module View = struct
     | 0 -> ""
     | n -> string_of_int n
 
-  (* Accessors *)
+  (* Grid accessors *)
+
   let square x y model =
     Xword.get model.xw x y
 
@@ -249,7 +268,8 @@ module View = struct
   let number x y model =
     display_num (square x y model).num
 
-  (* SVG fragments *)
+  (* Grid SVG fragments *)
+
   let svg_text cls x y txt =
     let open Svg in
     text ~a:[a_class cls; a_x_list [(px x)]; a_y_list [(px y)]] txt
@@ -321,14 +341,58 @@ module View = struct
         ]
     ]
 
+  (* Clues *)
+
+  let clue dir current (n, c) (model, f) =
+    let cls = if current = n then [ "crosspad-clue-current" ] else [] in
+    let open Html5 in
+    li ~a: [ a_class cls ; a_onclick (fun _ ->
+        Controller.update (Action.SetClue (dir, n)) (model, f);
+        true)]
+      [ div ~a:[ a_class ["crosspad-clue-number"] ]
+          [ pcdata (string_of_int n) ];
+        div ~a:[ a_class ["crosspad-clue-text"] ]
+          [ pcdata c ]
+      ]
+
+  let clue_box (model, f) =
+    let open Html5 in
+    let clues = model.xw.clues in
+    let list dir current cs =
+      div ~a:[ a_class ["crosspad-clue-section"] ]
+        [ ul ~a:[ a_class ["crosspad-clue-list"] ]
+            (List.map (fun c -> (clue dir current c (model, f))) cs) ]
+    in
+    let lbl str =
+      p ~a:[ a_class ["crosspad-clue-label"] ]
+        [ pcdata str ]
+    in
+    div ~a:[ a_class ["crosspad-clues-container"] ]
+      [ lbl "Across"
+      ; list `Across model.current_ac clues.across
+      ; lbl "Down"
+      ; list `Down model.current_dn clues.down
+      ]
+
+
+  (* Main view *)
+
   let view (model, f) =
     add_keyboard_handlers (model, f);
     let open Html5 in
-    div [
-      div [pcdata "hello world"];
-      div [ svg ~a:Svg.([a_width (px 600.0); a_height (px 600.0)])
-              [ svg_grid (model, f) ] ]
-    ]
+    let g =
+      div
+        [ svg ~a:Svg.([a_width (px 600.0); a_height (px 600.0)])
+            [ svg_grid (model, f) ]
+        ]
+    in
+    let clues = clue_box (model, f) in
+    div ~a:[ a_id "view-main" ]
+      [ div ~a:[ a_class ["crosspad-main"] ]
+          [ div ~a:[ a_class ["crosspad-grid-container"] ] [ g ]
+          ; clues
+          ]
+      ]
 end
 
 let main _ =
