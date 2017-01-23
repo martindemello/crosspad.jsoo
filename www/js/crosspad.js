@@ -3255,7 +3255,14 @@
      _x3_=[0,1,0],
      _x2_=[0,1,0],
      _xY_=[0,0,0],
-     _yC_=[0,caml_new_string("crosspad.ml"),399,17],
+     _x8_=
+      [0,[0,10,caml_new_string("foo")],[0,[0,20,caml_new_string("bar")],0]],
+     _x9_=
+      [0,[0,1,caml_new_string("hello")],[0,[0,2,caml_new_string("world")],0]],
+     _x7_=[0,0],
+     _x6_=[0,0],
+     _x5_=[0,0],
+     _yC_=[0,caml_new_string("crosspad.ml"),227,17],
      _yy_=[0,caml_new_string("crosspad-grid-container"),0],
      _yz_=[0,caml_new_string("crosspad-main"),0],
      _yA_=caml_new_string("view-main"),
@@ -3284,14 +3291,7 @@
      _ya_=[1,-57574468],
      _yb_=[1,19067],
      _yc_=[1,759637122],
-     _x__=[0,17960],
-     _x8_=
-      [0,[0,10,caml_new_string("foo")],[0,[0,20,caml_new_string("bar")],0]],
-     _x9_=
-      [0,[0,1,caml_new_string("hello")],[0,[0,2,caml_new_string("world")],0]],
-     _x7_=[0,0],
-     _x6_=[0,0],
-     _x5_=[0,0];
+     _x__=[0,17960];
     function erase_rel(param)
      {if(typeof param === "number")
        return 0;
