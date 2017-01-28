@@ -9,6 +9,8 @@ PKG react
 PKG reactiveData
 PKG tyxml
 
+PKG ocaml-vdom
+
 PKG xword
 PKG xword.convert
 
