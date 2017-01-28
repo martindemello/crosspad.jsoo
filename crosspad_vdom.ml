@@ -90,8 +90,7 @@ module View = struct
       a_class cstyle;
       a_x x0; a_y y0;
       a_width s; a_height s;
-      onclick (Action.SetCursor (x, y));
-      onkeydown (fun e -> Action.ToggleBlack) 
+      onclick (Action.SetCursor (x, y))
     ] []
     in
     g [ t_num; t_let; r ]
@@ -150,7 +149,8 @@ module View = struct
     div [
       div [pcdata "Vdom"];
       input ~a:[onkeydown action_of_key] [];
-      div [ Svg.(svg ~a:[a_width 600.0; a_height 600.0])
+      div ~a:[onkeydown action_of_key; int_prop "tabindex" 0]
+        [ Svg.(svg ~a:[a_width 600.0; a_height 600.0])
               [ svg_grid model ] ]
     ]
 end
