@@ -184,6 +184,5 @@ module Keyboard_code = struct
     Unidentified
     |> run_next code try_key_code_left
     |> run_next code try_key_code_right
-    |> run_next code try_key_code_numpad
     |> run_next code try_key_code_normal
 end

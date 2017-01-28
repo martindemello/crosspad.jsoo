@@ -30,6 +30,9 @@ module Model = struct
     debug : string
   }
 
+  let set_debug s model =
+    { model with debug = s }
+
   (* updates *)
   let renumber model =
     Xword.renumber model.xw;
@@ -178,4 +181,74 @@ module Controller = struct
       | Nothing -> model
     in
     f model
+end
+
+module Presenter = struct
+  open Model
+  open Cursor
+
+  (* Grid display *)
+
+  let letter_of_cell = function
+    | Letter s -> s
+    | Rebus r -> r.display_char
+    | _ -> ""
+
+  let display_num = function
+    | 0 -> ""
+    | n -> string_of_int n
+
+  let cellstyle x y model =
+    let cell = Xword.get_cell model.xw x y in
+    let is_cur = model.cursor.x = x && model.cursor.y = y in
+    let is_word = CSet.mem (x, y) model.current_word in
+    let bg =
+      if is_cur then match cell with
+        | Black -> "crosspad-cursor-black"
+        | _ -> "crosspad-cursor-white"
+      else if is_word then
+        "crosspad-word"
+      else match cell with
+        | Black -> "crosspad-black"
+        | _ -> "crosspad-white"
+    in
+    [bg; "crosspad-square"]
+
+  (* Input *)
+
+  let letter_of_code k =
+    if k >= 65 && k <= 90 then
+      Some (String.make 1 @@ Char.chr k)
+    else if k >= 97 && k <= 122 then
+      Some (String.make 1 @@ Char.chr (k - 32))
+    else
+      None
+
+  let action_of_keyboard_code (key, code) =
+    let open Js_event.Keyboard_code in
+    match key with
+    | Space -> Action.ToggleBlack
+    | ArrowLeft -> Action.MoveCursor `Left
+    | ArrowRight -> Action.MoveCursor `Right
+    | ArrowUp -> Action.MoveCursor `Up
+    | ArrowDown -> Action.MoveCursor `Down
+    | Backspace -> Action.Backspace
+    | Delete -> Action.Delete
+    | _ -> begin
+        match letter_of_code code with
+        | Some s -> Action.SetLetter s
+        | None -> Action.Nothing
+      end
+
+  (* Grid accessors *)
+
+  let square x y model =
+    Xword.get model.xw x y
+
+  let letter x y model =
+    letter_of_cell (square x y model).cell
+
+  let number x y model =
+    display_num (square x y model).num
+
 end

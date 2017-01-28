@@ -34,40 +34,15 @@ end
 module View = struct
   open Model
   open Cursor
-
-  let px x = (x, Some `Px)
+  open Presenter
 
   let top_left = {x = 0; y = 0}
 
   let square_size = 32
 
-  let cellstyle model x y =
-    let cell = Xword.get_cell model.xw x y in
-    let is_cur = model.cursor.x == x && model.cursor.y == y in
-    let bg = match cell with Black -> "black" | _ -> "white" in
-    let cursor = if is_cur then "cursor-" else "" in
-    "crosspad-" ^ cursor ^ bg
-
   let svg_text cls x y s =
     let open Svg in
     text_ ~a:[a_class cls; a_x x; a_y y] [pcdata s]
-
-  let svg_rect cls x y w h =
-    let open Svg in
-    rect ~a:[
-      a_class cls;
-      a_x x; a_y y;
-      a_width w; a_height h
-    ] [] 
-
-  let letter_of_cell = function
-    | Letter s -> s
-    | Rebus r -> r.display_char
-    | _ -> ""
-
-  let display_num = function
-    | 0 -> ""
-    | n -> string_of_int n
 
   let cell model x y =
     let s = square_size in
@@ -78,16 +53,14 @@ module View = struct
     let num_y = y0 +. (s /. 3.) in
     let let_x = x0 +. (s /. 2.) in
     let let_y = y0 +. s -. 5. in
-    let xw = model.xw in
-    let cstyle = ["crosspad-square"; cellstyle model x y] in
-    let sq = Xword.get xw x y in
+    let sq = Xword.get model.xw x y in
     let letter = letter_of_cell sq.cell in
     let number = display_num sq.num in
     let open Svg in
     let t_num = svg_text ["crosspad-number"] num_x num_y number in
     let t_let = svg_text ["crosspad-letter"] let_x let_y letter in
     let r = rect ~a:[
-      a_class cstyle;
+      a_class (cellstyle x y model);
       a_x x0; a_y y0;
       a_width s; a_height s;
       onclick (Action.SetCursor (x, y))
@@ -110,46 +83,32 @@ module View = struct
     let svg_w = w +. 1. in
     let svg_h = h +. 1. in
     let open Svg in
-    let box = svg_rect ["crosspad-grid-rect"] x0 y0 w h in
+    let box = rect ~a:[
+      a_class ["crosspad-grid-rect"];
+      a_x x0; a_y y0;
+      a_width w; a_height h
+    ] []
+    in
     svg ~a:[a_width svg_w; a_height svg_h]
       [ g ~a:[a_transform (translate 0.5 0.5)]
           ( box :: (cells model) )
       ]
 
-  let letter_of_code k =
-    if k >= 65 && k <= 90 then
-      Some (String.make 1 @@ Char.chr k)
-    else if k >= 97 && k <= 122 then
-      Some (String.make 1 @@ Char.chr (k - 32))
-    else
-      None
-
   let action_of_key e =
     let open Js_event.Keyboard_code in
     let code = e.which in
     let key = of_key_code code in
-    let action = match key with
-      | Space -> Action.ToggleBlack
-      | ArrowLeft -> Action.MoveCursor `Left
-      | ArrowRight -> Action.MoveCursor `Right
-      | ArrowUp -> Action.MoveCursor `Up
-      | ArrowDown -> Action.MoveCursor `Down
-      | Backspace -> Action.Backspace
-      | Delete -> Action.Delete
-      | _ -> begin
-          match letter_of_code code with
-          | Some s -> Action.SetLetter s
-          | None -> Action.Nothing
-        end
-    in
-    action
+    action_of_keyboard_code (key, code)
 
   let view model =
     let open Html in
     div [
       div [pcdata "Vdom"];
       div [pcdata model.debug];
-      div ~a:[a_class ["crosspad-grid-container"]; onkeydown action_of_key; int_prop "tabIndex" 0; autofocus]
+      div ~a:[a_class ["crosspad-grid-container"];
+              onkeydown action_of_key;
+              int_prop "tabIndex" 1;
+              autofocus]
         [ svg_grid model  ]
     ]
 end

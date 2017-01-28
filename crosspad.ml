@@ -4,6 +4,7 @@ open Lwt.Infix
 
 module View = struct
   open Model
+  open Presenter
   open Cursor
   open Tyxml_js
 
@@ -15,14 +16,6 @@ module View = struct
 
   (* utils *)
   let px x = (x, Some `Px)
-
-  let letter_of_code k =
-    if k >= 65 && k <= 90 then
-      Some (String.make 1 @@ Char.chr k)
-    else if k >= 97 && k <= 122 then
-      Some (String.make 1 @@ Char.chr (k - 32))
-    else
-      None
 
   (* events *)
   let add_keyboard_handlers (model, f) =
@@ -55,55 +48,11 @@ module View = struct
     w##.onkeypress := Dom_html.handler fn ;
     w##.onkeydown := Dom_html.handler fn
 
-  (* Grid display *)
-
-  let cellstyle x y model =
-    let cell = Xword.get_cell model.xw x y in
-    let is_cur = model.cursor.x = x && model.cursor.y = y in
-    let is_word = CSet.mem (x, y) model.current_word in
-    let bg =
-      if is_cur then match cell with
-      | Black -> "crosspad-cursor-black"
-      | _ -> "crosspad-cursor-white"
-      else if is_word then
-       "crosspad-word"
-      else match cell with
-      | Black -> "crosspad-black"
-      | _ -> "crosspad-white"
-    in
-    [bg; "crosspad-square"]
-
-  let letter_of_cell = function
-    | Letter s -> s
-    | Rebus r -> r.display_char
-    | _ -> ""
-
-  let display_num = function
-    | 0 -> ""
-    | n -> string_of_int n
-
-  (* Grid accessors *)
-
-  let square x y model =
-    Xword.get model.xw x y
-
-  let letter x y model =
-    letter_of_cell (square x y model).cell
-
-  let number x y model =
-    display_num (square x y model).num
-
   (* Grid SVG fragments *)
 
   let svg_text cls x y txt =
     let open Svg in
     text ~a:[a_class cls; a_x_list [(px x)]; a_y_list [(px y)]] txt
-
-  let svg_rect x y w h cls =
-    let open Svg in
-    rect ~a:[a_class cls;
-             a_x (px x); a_y (px y);
-             a_width (px w); a_height (px h)] []
 
   let cell x y (model, f) =
     let s = square_size in
