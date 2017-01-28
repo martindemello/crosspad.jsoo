@@ -26,7 +26,8 @@ module Model = struct
     current_dir : word_direction;
     current_word : CSet.t;
     current_ac : int;
-    current_dn : int
+    current_dn : int;
+    debug : string
   }
 
   (* updates *)
@@ -137,6 +138,7 @@ module Model = struct
       current_word = CSet.empty;
       current_ac = 0;
       current_dn = 0;
+      debug = ""
     }
     |> renumber
     |> update_current_word
@@ -154,6 +156,7 @@ module Action = struct
     | Backspace
     | Delete
     | SetClue of word_direction * int
+    | SetDebug of string
     | Nothing
 end
 
@@ -171,6 +174,7 @@ module Controller = struct
       | Backspace -> backspace_letter model
       | Delete -> delete_letter model
       | SetClue (d, n) -> set_current_clue d n model
+      | SetDebug s -> { model with debug = s }
       | Nothing -> model
     in
     f model

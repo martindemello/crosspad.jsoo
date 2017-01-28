@@ -148,10 +148,9 @@ module View = struct
     let open Html in
     div [
       div [pcdata "Vdom"];
-      input ~a:[onkeydown action_of_key] [];
-      div ~a:[onkeydown action_of_key; int_prop "tabindex" 0]
-        [ Svg.(svg ~a:[a_width 600.0; a_height 600.0])
-              [ svg_grid model ] ]
+      div [pcdata model.debug];
+      div ~a:[a_class ["crosspad-grid-container"]; onkeydown action_of_key; int_prop "tabIndex" 0; autofocus]
+        [ svg_grid model  ]
     ]
 end
 
