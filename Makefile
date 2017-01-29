@@ -27,4 +27,4 @@ vdom :
 
 clean:
 	ocamlbuild -clean
-	rm *.cm?
+	rm src/lib/*.cm?
