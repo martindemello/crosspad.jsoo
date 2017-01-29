@@ -11,6 +11,9 @@ module Html = struct
   let a_height = float_prop "height"
   let a_class xs = class_ (String.concat " " xs)
   let pcdata = text
+  let ul = elt "ul"
+  let li = elt "li"
+  let p = elt "p"
 end
 
 module Svg = struct
@@ -94,6 +97,38 @@ module View = struct
           ( box :: (cells model) )
       ]
 
+  (* Clues *)
+
+  let clue dir current (n, c) model =
+    let cls = if current = n then [ "crosspad-clue-current" ] else [] in
+    let open Html in
+    li ~a: [ a_class cls ;
+             onclick (Action.SetClue (dir, n));
+           ]
+      [ div ~a:[ a_class ["crosspad-clue-number"] ]
+          [ pcdata (string_of_int n) ];
+        div ~a:[ a_class ["crosspad-clue-text"] ]
+          [ pcdata c ]
+      ]
+
+  let clue_box dir model =
+    let open Html in
+    let c_list dir =
+      let current = current_clue dir model in
+      let cs = clue_list dir model in
+      div ~a:[ a_class ["crosspad-clue-section"] ]
+        [ ul ~a:[ a_class ["crosspad-clue-list"] ]
+            (List.map (fun c -> (clue dir current c model)) cs) ]
+    in
+    let lbl str =
+      p ~a:[ a_class ["crosspad-clue-label"] ]
+        [ pcdata str ]
+    in
+    div ~a:[ a_class ["crosspad-clues-container"] ]
+      [ lbl (cluebox_header dir)
+      ; c_list dir
+      ]
+
   let action_of_key e =
     let open Js_event.Keyboard_code in
     let code = e.which in
@@ -105,11 +140,15 @@ module View = struct
     div [
       div [pcdata "Vdom"];
       div [pcdata model.debug];
-      div ~a:[a_class ["crosspad-grid-container"];
-              onkeydown action_of_key;
-              int_prop "tabIndex" 1;
-              autofocus]
-        [ svg_grid model  ]
+      div ~a:[ a_class ["crosspad-main"] ]
+        [ div ~a:[a_class ["crosspad-grid-container"];
+                  onkeydown action_of_key;
+                  int_prop "tabIndex" 0;
+                  autofocus]
+            [ svg_grid model  ]
+        ; clue_box `Across model
+        ; clue_box `Down model
+        ]
     ]
 end
 

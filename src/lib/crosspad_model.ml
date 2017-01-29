@@ -256,4 +256,17 @@ module Presenter = struct
   let number x y model =
     display_num (square x y model).num
 
+  (* Clues *)
+  let cluebox_header dir = match dir with
+    | `Across -> "Across"
+    | `Down -> "Down"
+
+  let clue_list dir model = match dir with
+    | `Across -> model.xw.clues.across
+    | `Down -> model.xw.clues.down
+
+  let current_clue dir model = match dir with
+    | `Across -> model.current_ac
+    | `Down -> model.current_dn
+
 end
