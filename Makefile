@@ -1,7 +1,16 @@
-PACKAGES=-package ocaml-vdom -package xword -package xword.convert
-SRCDIR=src/lib
+PACKAGES = -package ocaml-vdom -package xword -package xword.convert
+SRCDIR = src/lib
 
-all : vdom
+.PHONY: all clean vdom css
+
+
+vpath %.scss src/static
+vpath %.ml src/lib
+
+all : css vdom
+
+css : crosspad.scss
+	scss src/static/crosspad.scss > www/css/crosspad.css
 
 crosspad :
 	ocamlbuild -use-ocamlfind -plugin-tag "package(js_of_ocaml.ocamlbuild)" src/lib/crosspad.js

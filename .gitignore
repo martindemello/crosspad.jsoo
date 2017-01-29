@@ -1,7 +1,11 @@
 _build
+.sass-cache
+www/js/crosspad.js
+www/css/crosspad.css
 *.native
 *.byte
 .*.swp
 *.docdir
+*.cm?
 setup.data
 setup.log

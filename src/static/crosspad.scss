@@ -1,0 +1,232 @@
+@mixin box-sizing {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+@mixin flex {
+    display: -webkit-box;
+    display: -moz-box;
+    display: -ms-flexbox;
+    display: -webkit-flex;
+    display: flex;
+}
+
+html, body {
+    min-width: 800px;
+    height: 98vh;
+    font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
+}
+
+#main {
+    height: 100%;
+}
+
+#view-main {
+    height: 100%;
+    display: flex;
+    flex-flow: column;
+}
+
+.crosspad-main {
+    height: inherit;
+    max-height: 80%;
+    display: flex;
+    align-content: flex-start;
+}
+
+.crosspad-grid-container {
+    padding: 0;
+    margin: 10px;
+    vertical-align: top;
+}
+
+.crosspad-clues-container {
+    padding: 0px;
+    padding-top: 1px;
+    margin: 10px;
+    vertical-align: top;
+
+    border-color: rgba(0, 0, 0, 0.5);
+    border: 1px;
+    border-style: inset;
+    background-color: rgb(240, 240, 240);
+    width: 35em;
+
+    display: flex;
+    flex-flow: column;
+}
+
+.crosspad-statusbar-container {
+    background-color: rgb(240, 240, 240);
+}
+
+.crosspad-statusbar-top {
+    @extend .crosspad-statusbar-container;
+    margin-bottom: auto;
+}
+
+.crosspad-statusbar-bottom {
+    @extend .crosspad-statusbar-container;
+    margin-top: auto;
+}
+
+.crosspad-grid-rect {
+    fill: rgb(255,255,255);
+    stroke-width: 1;
+    stroke: rgb(128,128,128);
+}
+
+.crosspad-square {
+    margin: 0;
+    padding: 0;
+    stroke-width: 1;
+    stroke: rgb(0, 0, 0);
+}
+
+.crosspad-black {
+    fill: rgb(0, 0, 0);
+    fill-opacity: 1;
+}
+
+.crosspad-white {
+    fill: rgb(255, 255, 255);
+    fill-opacity: 0;
+}
+
+.crosspad-cursor-black {
+    fill: rgb(0, 0, 128);
+    fill-opacity: 0.5;
+}
+
+.crosspad-cursor-white {
+    fill: rgb(128, 128, 255);
+    fill-opacity: 0.5;
+}
+
+.crosspad-word {
+    fill: rgb(192, 192, 255);
+    fill-opacity: 0.5;
+}
+
+.crosspad-number {
+    font-family: arial;
+    letter-spacing: 0;
+    font-size: 0.625rem;
+}
+
+.crosspad-letter {
+    font-family: arial;
+    font-size: 1rem;
+    text-anchor: middle;
+}
+
+.crosspad-clue-section {
+    flex: auto;
+    overflow: scroll;
+    margin: 0;
+    padding: 0;
+}
+
+.crosspad-clue-box {
+    @include box-sizing;
+    resize: none;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.crosspad-clue-label {
+    background-color: rgb(240, 240, 255);
+    height: 1.25em;
+    margin: 0;
+}
+
+.crosspad-clue-list {
+    list-style-type: none;
+    background-color: white;
+    margin: 0;
+    padding: 0;
+}
+
+.crosspad-clue-number {
+    display: table-cell;
+    padding-right: 0.625rem;
+}
+
+.crosspad-clue-text {
+    display: table-cell;
+}
+
+.crosspad-clue-current {
+    background-color: rgba(61, 146, 201, 0.4);
+}
+
+$button-border: rgb(61, 146, 201);
+
+.crosspad-toolbar-item {
+    margin-left: 2px;
+    margin-right: 2px;
+    font: 1.1em Arial;
+}
+
+.crosspad-button {
+    @extend .crosspad-toolbar-item;
+    padding: 2px;
+    border: 2px;
+    border-style: solid;
+    border-color: $button-border;
+}
+
+.crosspad-button-active {
+    @extend .crosspad-button;
+    background-color: rgba(61, 146, 201, 0.8);
+}
+
+.crosspad-button-inactive {
+    @extend .crosspad-button;
+    background-color: rgba(61, 146, 201, 0.1);
+}
+
+.crosspad-button-toolbar {
+    @extend .crosspad-button;
+    background-color: rgba(61, 146, 201, 0.1);
+}
+
+.crosspad-toolbar-input {
+    @extend .crosspad-toolbar-item;
+    padding: 0px;
+    border: 2px;
+    border-style: solid;
+    border-color: $button-border;
+}
+
+.crosspad-toolbar-combo {
+    @extend .crosspad-toolbar-item;
+    padding: 0px;
+    border: 2px;
+    border-style: solid;
+    border-color: $button-border;
+}
+
+.crosspad-status-label {
+    margin-right: 4px;
+    margin-left: 4px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.crosspad-status-group {
+    border-left: 1px;
+    border-left-style: inset;
+    margin-right: 4px;
+    margin-left: 4px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    padding-left: 2px;
+    height: 100%;
+}
+
+.crosspad-statusbar {
+    display: inline;
+}
