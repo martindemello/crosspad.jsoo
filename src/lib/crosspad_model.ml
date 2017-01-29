@@ -27,6 +27,8 @@ module Model = struct
     current_word : CSet.t;
     current_ac : int;
     current_dn : int;
+    symmetry : symmetry;
+    grid_locked : bool;
     debug : string
   }
 
@@ -108,7 +110,8 @@ module Model = struct
   let toggle_black model =
     let xw = model.xw in
     let x, y = model.cursor.x, model.cursor.y in
-    if Xword.toggle_black xw x y then Xword.renumber xw;
+    if Xword.toggle_black ~symmetry:model.symmetry xw x y then
+      Xword.renumber xw;
     model
     |> advance_cursor
     |> update_current_word
@@ -141,6 +144,8 @@ module Model = struct
       current_word = CSet.empty;
       current_ac = 0;
       current_dn = 0;
+      symmetry = `Symm180;
+      grid_locked = false;
       debug = ""
     }
     |> renumber
