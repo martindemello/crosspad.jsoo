@@ -37,7 +37,7 @@ module Model = struct
 
   (* updates *)
   let renumber model =
-    Xword.renumber model.xw;
+    let _ = Xword.renumber model.xw in
     model
 
   let update_current_word model =
@@ -111,7 +111,7 @@ module Model = struct
     let xw = model.xw in
     let x, y = model.cursor.x, model.cursor.y in
     if Xword.toggle_black ~symmetry:model.symmetry xw x y then
-      Xword.renumber xw;
+      ignore @@ Xword.renumber xw;
     model
     |> advance_cursor
     |> update_current_word
@@ -144,7 +144,7 @@ module Model = struct
       current_word = CSet.empty;
       current_ac = 0;
       current_dn = 0;
-      symmetry = `Symm180;
+      symmetry = Symm180;
       grid_locked = false;
       debug = ""
     }
