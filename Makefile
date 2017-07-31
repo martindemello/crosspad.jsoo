@@ -15,10 +15,6 @@ all : css vdom
 css : crosspad.scss
 	scss src/static/crosspad.scss > www/css/crosspad.css
 
-crosspad :
-	ocamlbuild -use-ocamlfind -plugin-tag "package(js_of_ocaml.ocamlbuild)" src/lib/crosspad.js
-	cp _build/src/lib/crosspad.js www/js
-
 vdom :
 	ocamlfind ocamlc $(PACKAGES) -I $(SRCDIR) -no-check-prims -linkpkg -o crosspad.exe \
 	 	$(SRCDIR)/js_event.ml \
