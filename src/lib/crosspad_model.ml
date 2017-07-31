@@ -2,6 +2,14 @@ open Xword.Types
 
 type key_direction = [`Left | `Right | `Up | `Down ]
 
+(* Editable clue with a field for notes *)
+type working_clue = {
+  number : int;
+  initial_clue : string;
+  clue : string;
+  notes : string
+}
+
 module Coords = struct
   type t = int * int
 
@@ -25,6 +33,8 @@ module Model = struct
     cursor : Cursor.t;
     current_dir : word_direction;
     current_word : CSet.t;
+    clues_ac : working_clue list;
+    clues_dn : working_clue list;
     current_ac : int;
     current_dn : int;
     symmetry : symmetry;
@@ -131,17 +141,23 @@ module Model = struct
     |> delete_letter
 
   (* init *)
+  let init_clue (number, initial_clue) =
+    { number; initial_clue; clue = initial_clue; notes = "Notes" }
+
   let init rows cols =
     let xw = Xword.make rows cols in
-    let clues = { across = [(1, "hello"); (2, "world")];
-                  down = [(10, "foo"); 20, "bar"]
-                }
+    let clues = {
+      across = [(1, "hello"); (2, "world")];
+      down = [(10, "foo"); 20, "bar"]
+    }
     in
     let xw = { xw with clues } in
     { xw;
       cursor = Cursor.make rows cols;
       current_dir = `Across;
       current_word = CSet.empty;
+      clues_ac = List.map init_clue xw.clues.across;
+      clues_dn = List.map init_clue xw.clues.down;
       current_ac = 0;
       current_dn = 0;
       symmetry = Symm180;
@@ -262,8 +278,8 @@ module Presenter = struct
     | `Down -> "Down"
 
   let clue_list dir model = match dir with
-    | `Across -> model.xw.clues.across
-    | `Down -> model.xw.clues.down
+    | `Across -> model.clues_ac
+    | `Down -> model.clues_dn
 
   let current_clue dir model = match dir with
     | `Across -> model.current_ac

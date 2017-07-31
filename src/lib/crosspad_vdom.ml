@@ -99,16 +99,21 @@ module View = struct
 
   (* Clues *)
 
-  let clue dir current (n, c) model =
-    let cls = if current = n then [ "crosspad-clue-current" ] else [] in
+  let clue dir current c model =
+    let cls = if current = c.number then [ "crosspad-clue-current" ] else [] in
     let open Html in
     li ~a: [ a_class cls ;
-             onclick (Action.SetClue (dir, n));
+             onclick (Action.SetClue (dir, c.number));
            ]
-      [ div ~a:[ a_class ["crosspad-clue-number"] ]
-          [ pcdata (string_of_int n) ];
-        div ~a:[ a_class ["crosspad-clue-text"] ]
-          [ pcdata c ]
+      [ div
+          [
+            div ~a:[ a_class ["crosspad-clue-number"] ]
+              [ pcdata (string_of_int c.number) ];
+            div ~a:[ a_class ["crosspad-clue-text"] ]
+              [ pcdata c.clue ]
+          ];
+        div ~a:[ a_class ["crosspad-clue-notes"] ]
+          [ pcdata c.notes ]
       ]
 
   let clue_box dir model =
