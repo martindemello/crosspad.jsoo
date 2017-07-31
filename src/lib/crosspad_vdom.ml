@@ -47,6 +47,35 @@ module View = struct
     let open Svg in
     text_ ~a:[a_class cls; a_x x; a_y y] [pcdata s]
 
+  let action_of_keyboard_code (key, code) =
+    let open Js_event.Keyboard_code in
+    match key with
+    | Space -> Action.ToggleBlack
+    | ArrowLeft -> Action.MoveCursor `Left
+    | ArrowRight -> Action.MoveCursor `Right
+    | ArrowUp -> Action.MoveCursor `Up
+    | ArrowDown -> Action.MoveCursor `Down
+    | Backspace -> Action.Backspace
+    | Delete -> Action.Delete
+    | _ -> begin
+        match letter_of_code code with
+        | Some s -> Action.SetLetter s
+        | None -> Action.Nothing
+    end
+
+  let cellstyle x y model =
+    let bg =
+      match cell_background x y model with
+      | `Black -> "crosspad-black"
+      | `White -> "crosspad-white"
+      | `CursorBlack -> "crosspad-cursor-black"
+      | `CursorWhite -> "crosspad-cursor-white"
+      | `CurrentWord -> "crosspad-word"
+      | `CursorSymmBlack -> "crosspad-cursor-black"
+      | `CursorSymmWhite -> "crosspad-cursor-white"
+    in
+    [bg; "crosspad-square"]
+
   let cell model x y =
     let s = square_size in
     let x0 = top_left.x + x * s |> float in
@@ -157,7 +186,7 @@ module View = struct
     ]
 end
 
-let init = return (Model.init 15 15)
+let init = return (Model.init (Xword.make 15 15))
 
 let update model action =
   let f (x : Model.t) = x in
